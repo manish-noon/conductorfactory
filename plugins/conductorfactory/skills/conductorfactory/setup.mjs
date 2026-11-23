@@ -20,10 +20,10 @@ const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "
 const target = join(root, "conductorfactory");
 
 // The factory's own code: always this skill's version.
-for (const part of ["bin", "prompts"]) rmSync(join(target, part), { recursive: true, force: true });
+for (const part of ["bin", "prompts", "troubleshooting.md"]) rmSync(join(target, part), { recursive: true, force: true });
 cpSync(join(SKILL, "conductorfactory"), target, { recursive: true });
 chmodSync(join(target, "run"), 0o755);
-console.log("updated  conductorfactory/run, bin/, prompts/, config.default.json");
+console.log("updated  conductorfactory/run, bin/, prompts/, troubleshooting.md, config.default.json");
 
 // The repository's own files: never overwritten.
 const own = [

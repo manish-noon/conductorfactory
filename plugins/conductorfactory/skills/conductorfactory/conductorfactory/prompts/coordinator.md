@@ -20,7 +20,7 @@ Every setting lives in the factory config (`conductorfactory/config.default.json
 
 - `<run> watch`: the watcher (see **The watch loop**). `<run> events`: one poll on demand (new issues, issue labels and the status guard, PR + CI, unprocessed worker results, new human feedback).
 - `<run> state show|set|log|phase|render|archive|metrics`: your state file, `.context/factory/state.json`.
-- `<run> issue status|size|outcome|assign-me|comment`: issue writes. One status label carries the factory stage; the only other labels you set are size and outcome.
+- `<run> issue status|size|outcome|assign-me|assign|owner|comment`: issue writes, and whose issue it is. One status label carries the factory stage; the only other labels you set are size and outcome.
 - `<run> pr comment|label|unlabel <pr> …`: PR comments and labels. `<run> gh …` for everything else on GitHub.
 - Conductor: `CreateWorkspace`, `GetWorkspaces`, `CreateSession`, `SendSessionMessage` (use `mode: "queue"`), `GetSessions`, `SetWorkspaceStatus`, `ListSections` / `CreateSection` / `MoveWorkspacesToSection`, `ArchiveWorkspaces`.
 
@@ -34,7 +34,7 @@ Every setting lives in the factory config (`conductorfactory/config.default.json
 
 The issue's status label is how humans read the factory. **`<run> state phase <KEY> <phase>` sets it for you** from `phases.<phase>.status` in the config, removing every other factory status label (including the queue label), so never set one by hand except to undo a stray change (section F). A `null` status means the factory leaves the labels alone.
 
-**Only issues that got the queue label (`github.queueLabel`) are yours**; never touch any other issue. `<KEY>` is the issue number.
+**Whose issue it is.** Several people can run a factory on one repository, each under their own GitHub login. An issue's **owner is its assignee**; an unassigned queued issue belongs to whoever added the queue label (`github.queueLabel`), plus the logins in `github.claimFor`. The poll only ever lists **your** issues (`owner` in the poll is your login), so never touch any other issue. The run's essentials are also kept on GitHub, in a hidden marker at the end of the run comment, so a run can move to another owner or another Factory home. `<KEY>` is the issue number.
 
 **Ids:** generate UUIDs with `uuidgen | tr A-Z a-z`, save them to the state file **before** the Conductor call, and reuse them on retry, so a retry never creates a second workspace or session.
 
@@ -52,7 +52,7 @@ Never use `/loop` or scheduled prompts: each firing would land in this chat and 
 
 1. Start the watcher: `<run> watch`. It polls every `watcher.pollSeconds` with no model cost and **exits only when there is work**, printing `WAKE: <reasons>` and the poll JSON. It also exits every `watcher.heartbeatMinutes` as a heartbeat. Run it as a **background** command with the longest timeout your shell tool allows (two hours is enough) if your harness wakes you when a background command exits; otherwise run it in the foreground with the longest timeout allowed and wait for it. If the timeout cuts it off before it prints `WAKE`, just start it again.
 2. On a wake, run one tick with the printed poll (sections A–F; a heartbeat needs only section C). Keep quiet ticks to a line.
-3. Start the watcher again. Exactly one watcher runs at a time; a second one refuses to start (`WATCHER ALREADY RUNNING`). If it says that, do nothing more.
+3. Start the watcher again. Exactly one watcher runs at a time; a second one refuses to start (`WATCHER ALREADY RUNNING`). If it says that, do nothing more. `ANOTHER FACTORY HOME IS RUNNING` means this login already runs a factory for this repository from another checkout: tell the human which one and end your turn.
 4. If the watcher prints `STOPPED`, a human stopped the factory (`conductorfactory/run stop`): do not start it again, send nothing to any session, and end your turn with one line. `conductorfactory/run start` brings you back.
 
 **Your context:** older turns may be compacted when this chat gets long. Everything you need to keep is in `state.json`, not in this chat. If the full text of this file is no longer in your context (for example after a compaction), re-read it before acting.
@@ -61,13 +61,17 @@ Never use `/loop` or scheduled prompts: each firing would land in this chat and 
 
 ### A. Claim new issues (while active < `limits.maxActive`)
 
-For each new issue, in order. If it has `requeued: true` (it was merged or canceled before and someone queued it again), first run `<run> state archive <KEY>` so it starts from scratch.
+For each issue in `newIssues`, in order. If it has `requeued: true` (it was merged, canceled or handed over before and is yours again), first run `<run> state archive <KEY>` so it starts from scratch. Each has a `mode`: `start` for a fresh issue, `takeover` when an earlier run (`previous`: its owner, phase, round and PR) left a branch to continue, because the issue was reassigned to you or its Factory home is gone.
 
-1. `<run> state set <KEY> '{"title":…,"url":…,"branchName":…,"workspaceId":"<uuid>","sessions":{"builder":"<uuid>"},"seen":{"issue":"<now ISO>","pr":"<now ISO>"}}'` then `<run> state phase <KEY> triaging`. The `seen` watermarks mean comments written before the claim are not treated as feedback (the Builder still reads them as part of the ask).
+`pending` lists issues handed to you whose previous owner's factory has not let go yet: leave them, they move to `newIssues` by themselves. `foreign` lists your own runs that belong to another Factory home: leave them too.
+
+1. `<run> state set <KEY> '{"title":…,"url":…,"branchName":…,"workspaceId":"<uuid>","sessions":{"builder":"<uuid>"},"seen":{"issue":"<now ISO>","pr":"<now ISO>"}}'` (for a takeover also `"round"`, `"pr"`, `"prUrl"` and `"size"` from `previous`, and `"takenOverFrom":"<previous.owner>"`), then `<run> issue assign-me <KEY>` so the ownership shows on GitHub, then `<run> state phase <KEY> triaging`. The `seen` watermarks mean comments written before the claim are not treated as feedback (the Builder still reads them as part of the ask).
 2. `CreateWorkspace` with `workspaceId`, `name: "issue-<KEY>"`, `baseBranch: <git.baseBranch>`, `sectionId: <the section's id>`, and `firstSession: { sessionId, messageId, agent: <sessions.agent>, title: "Builder · #<KEY>", message }` (plus `model: <sessions.model>` unless it is `default`) where message is:
-   > <mark> You are the factory Builder. Factory home: `<Factory home>`. Prompts: `<prompts>`. Read `<prompts>/builder.md` and follow it. Issue: **#<KEY>**. Branch: `<branchName>`. Mode: start. Round: 1.
+   > <mark> You are the factory Builder. Factory home: `<Factory home>`. Prompts: `<prompts>`. Read `<prompts>/builder.md` and follow it. Issue: **#<KEY>**. Branch: `<branchName>`. Mode: <start|takeover>. Round: <1, or previous.round>. PR: <#previous.pr or none>.
 3. Next tick (the watcher wakes you while the workspace is starting), once `GetWorkspaces` shows it `ready`: store `workspacePath` (its `path`) and `workspaceUrl` (its `appUrl`). If it is `failed` or missing: retry with a new workspace id up to `limits.workspaceCreateRetries` times, then escalate.
-4. Post the run comment (see **Run comment**).
+4. Post the run comment (see **Run comment**): always a new one of your own, also on a takeover.
+
+After a takeover the Builder's results are handled by the normal table in B. Nothing verified or reviewed by the previous owner carries over: the first check pass is `scope: full` and the Reviewer starts as in round 1.
 
 ### B. Process worker results (`tracked.<KEY>.newResults`)
 
@@ -137,10 +141,22 @@ New comments from humans on the issue or the PR, oldest first, already filtered 
 
 The poll compares the issue's state and status labels (`statusLabels`) with `phases.<phase>.status`:
 - **`ok`** → nothing.
+- **`reassigned`** → the issue now belongs to someone else: **hand it over** (below).
+- **`unassigned`** → nobody is assigned any more: `<run> issue assign-me <KEY>` and carry on.
 - **`closed`** → a human closed the issue without a merged PR: phase `canceled`, `SetWorkspaceStatus canceled`, stop.
 - **`paused`** → a human added `github.pauseLabel`: store `pausedFrom` (the current phase), phase `paused`, send no more messages, keep the workspace.
 - **`resumed`** → a paused issue got `github.queueLabel` again: phase back to `pausedFrom` (which sets its label) and continue (re-send the last pending step if nothing is running).
 - **`drift`** → the status label was removed, changed, or another one was added: set it back with `<run> issue status <KEY> <phases.<phase>.status>` and `<run> state log <KEY> status_reset '{"from":"<statusLabels>"}'`. If the same issue is reset more than `limits.maxStatusResets` times, mention it in the run comment so the human can find what keeps changing it.
+
+## Hand over (the issue was reassigned)
+
+The new owner's factory continues from the branch on GitHub, so make sure the work is there, then let go:
+1. If the Builder has work that is not pushed (its session is `running`, or its latest result is `building`), send it once: `<mark> Handover: this issue now belongs to <new owner>. Commit and push your work in progress now (a WIP commit is fine), then stop.` Wait for the next tick. If it cannot push, say so in step 3.
+2. phase `released` (the labels stay as they are, so the new owner's factory sees the stage) · run comment, so the marker on GitHub says released.
+3. A new issue comment: handed over to <new owner> (their login, without `@`), the branch and PR, the stage it was at, and anything not pushed.
+4. Run metrics (below) · `SetWorkspaceStatus canceled` · send nothing further to its sessions and leave the workspace for the human to archive.
+
+If the issue comes back to you later it appears in `newIssues` again as a takeover.
 
 ## Escalate (Needs Human)
 
@@ -154,7 +170,7 @@ The human takes over, either in the Builder's chat or by commenting. A human com
 
 ## Run metrics (when an issue leaves the factory)
 
-When an issue reaches `merged`, `needs_human` or `canceled`, post its final metrics as a **new** issue comment, after the other steps for that transition:
+When an issue reaches `merged`, `needs_human`, `canceled` or `released`, post its final metrics as a **new** issue comment, after the other steps for that transition:
 
 ```sh
 <run> state metrics <KEY> --md > .context/factory/metrics-<KEY>.md
@@ -169,4 +185,4 @@ After every phase change: `<run> state render <KEY> > .context/factory/run-<KEY>
 
 ## Never
 
-Edit product code · push to a factory branch · approve a PR · merge a PR yourself (only `--auto`, which waits for the required approval and checks) · touch an issue that never had `github.queueLabel` · change an issue's labels other than its status, size and outcome labels · close or reopen an issue · do anything `conductorfactory/project.md` lists under **Never**.
+Edit product code · push to a factory branch · approve a PR · merge a PR yourself (only `--auto`, which waits for the required approval and checks) · touch an issue that is not yours (not in your poll) · assign an issue to anyone but yourself · change an issue's labels other than its status, size and outcome labels · close or reopen an issue · do anything `conductorfactory/project.md` lists under **Never**.

@@ -55,6 +55,7 @@ In a repository, after setup (all tracked in git):
 | `conductorfactory/prompts/` | `coordinator.md`, `builder.md`, `verifier.md`, `reviewer.md` |
 | `conductorfactory/config.default.json` | Every setting and its default |
 | `conductorfactory/config.json` | The repository's overrides |
+| `conductorfactory/troubleshooting.md` | Attaching files; several people sharing the repository |
 | `conductorfactory/project.md` | The repository-specific rules: what to read, checks, how acceptance tests run, plan-first tripwires, blocking review rules, what never to do |
 | `FACTORY.md` (root) | For whoever writes issues, human or agent: how the factory works, how to write an issue it can build (with screenshots when the task is visual), rules for an assistant filing issues for someone, what each label means, and troubleshooting for attaching files |
 
@@ -62,7 +63,7 @@ Commands, all as `<Factory home>/conductorfactory/run <command> …`:
 
 | Command | What |
 |---|---|
-| `start` | Check the setup, make sure the labels exist, clear a previous stop, print the message that starts the Coordinator chat |
+| `start [--takeover]` | Check the setup, make sure the labels exist, clear a previous stop, print the message that starts the Coordinator chat. Refuses if this login's runs belong to another Factory home, unless `--takeover` |
 | `stop` | Stop the watcher and keep it stopped |
 | `status` | Is it running, and where each issue is |
 | `config [key]` | The merged settings, or one value |
@@ -70,7 +71,7 @@ Commands, all as `<Factory home>/conductorfactory/run <command> …`:
 | `events` | One poll: new issues, labels and status guard, PR + CI, worker results, human comments |
 | `watch` | The Coordinator's watcher: polls at no model cost, exits when there is work |
 | `state show\|set\|log\|phase\|render\|archive\|metrics` | The Coordinator's state file and run comment |
-| `issue show\|queue\|status\|size\|outcome\|assign-me\|comment\|evidence` | Issue reads and writes |
+| `issue show\|queue\|owner\|assign\|status\|size\|outcome\|assign-me\|comment\|evidence` | Issue reads and writes |
 | `pr show\|feedback\|comment\|label\|unlabel` | PR reads and writes |
 | `commit …` | `git commit` with the factory trailer |
 | `gh …` | `gh` with the factory's environment |
@@ -121,7 +122,8 @@ Does everything a repository needs, once. Do each step; skip one only when it is
 
 1. `<run> start`. It checks `project.md`, makes sure the labels exist, clears a previous stop and
    prints the status with a `coordinatorMessage`. If `conductorfactory/` is missing, run setup
-   first. If it fails, report its message. If `watcherPid` is set, a Coordinator is already
+   first. If it fails, report its message; when it says the runs belong to another Factory home,
+   ask the user whether that home is gone before running `<run> start --takeover`. If `watcherPid` is set, a Coordinator is already
    running here: say so and stop.
 2. Start the Coordinator in its **own chat**, so this one stays clean: with Conductor's
    `CreateSession` in this workspace, title `Factory Coordinator`, and the printed
@@ -149,6 +151,23 @@ is running, stopped, or has no Coordinator (no watcher and not stopped: suggest 
 
 These are done on GitHub, not here: add the pause label to pause, the queue label again to resume,
 close the issue or its PR to cancel.
+
+## Several people, one repository
+
+Each person runs their own factory under their own `gh` login. An issue's **owner is its
+assignee**; unassigned, it belongs to whoever added the queue label (plus logins listed in
+`github.claimFor`, for an assistant that files issues under its own account). A Coordinator only
+ever sees its own issues, so two factories never compete for one.
+
+- Give a task to someone: assign the issue to them (`<run> issue assign <N> <login>`, or on GitHub).
+- Move a running task: change the assignee. The old factory pushes and lets go (phase
+  `released`); the new one continues the branch and PR in **Mode: takeover**.
+- The run's essentials (owner, Factory home, phase, round, branch, PR) are kept in a hidden marker
+  on the "Factory run" comment, so a run survives a lost workspace: `/conductorfactory start`
+  refuses while this login's runs belong to another Factory home, and
+  `<run> start --takeover` adopts them.
+- `<run> issue owner <N>` shows who owns an issue and its stored run state.
+- One Coordinator per login per repository.
 
 ## Handing tasks to an assistant
 

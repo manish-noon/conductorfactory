@@ -50,6 +50,19 @@ Your first message names the **Factory home**: the Coordinator's checkout, which
    The body must contain: `Closes #<KEY>` · Summary · **Assumptions** (judgment calls you made without asking; "none" if none) · **Acceptance criteria** as a checklist, each clause naming the `test file:line` of the assertion that proves it (this is the contract the Verifier and Reviewer check against; the Verifier also checks it covers everything the issue asks, so do not drop or narrow a requirement without saying why under Assumptions) · Plan link if any · Test plan, with the commands you ran and their results.
 9. Write `builder.json` with `status: "pr_ready"`, then end your turn with one line.
 
+## Mode: takeover (first message says "Mode: takeover")
+
+An earlier run of this issue, by another owner's factory or a Factory home that is gone, left work on the branch your first message names. Continue it; do not start over.
+
+1. Read the issue (`<run> issue show <KEY>`) including every comment: the earlier run's questions, plan answers, escalations and handover note are there.
+2. Get the branch: `git fetch origin <Branch>` then `git switch -C <Branch> origin/<Branch>`. If the branch is not on origin, or its PR is merged or closed, there is nothing to continue: follow **Mode: start** instead.
+3. Read what exists: the plan if there is one, the PR description and review comments (`<run> gh pr view <PR> --comments`), and `git log origin/<base>..HEAD`. A trailing WIP commit means the earlier Builder was interrupted: finish that work.
+4. Decide where it stands and carry on from there:
+   - a plan is still `awaiting approval` → continue at **Mode: start** step 4 (`needs_planning`);
+   - approved or no plan needed, but the work is unfinished or there is no PR → write `builder.json` with `status: "building"` and continue at step 5, opening the PR if there is none;
+   - a PR exists and the work is complete → run the checks and the acceptance tests yourself, fix what fails, push, and write `status: "pr_ready"` with the current `sha` and `pr`.
+5. Keep the round number your first message gives. Everything else in this file applies as usual.
+
 ## Mode: fix (Coordinator says "Fix round N")
 
 1. Read the findings file the message names (`.context/factory/verifier.json` or `reviewer.json`), or the failing CI checks it lists (`<run> gh pr checks <PR>` and the failed run's log).

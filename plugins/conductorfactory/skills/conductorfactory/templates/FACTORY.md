@@ -67,7 +67,7 @@ Constraints (must work offline, must not add a dependency, …).
 
 For anything visual (a screen, a layout, an error dialog), attach a screenshot or a short recording
 of what it looks like today, and a sketch or example of what it should look like if you have one.
-How to attach, and what can go wrong, is under **Troubleshooting and known issues** below.
+How to attach, and what can go wrong, is in [troubleshooting](./conductorfactory/troubleshooting.md).
 
 ### Acceptance criteria decide the result
 
@@ -101,13 +101,31 @@ gh issue create --title "<title>" --body-file issue.md --label "factory:queue"
 Add the repository's usual labels (area, priority) as well. To queue an existing issue:
 `gh issue edit <number> --add-label "factory:queue"`.
 
+## Who builds it: several people, one repository
+
+Each person runs their own factory under their own GitHub login, and every issue has one owner:
+
+- **The owner is the issue's assignee.** Assign the issue to a person and their factory builds it.
+- **Unassigned, it belongs to whoever added `factory:queue`**; their factory assigns it to them
+  when it starts.
+- **To give a task to someone else**, assign it to them when you queue it:
+  `gh issue create … --label "factory:queue" --assignee <their login>`, or pick them under
+  Assignees in the browser. An assistant told "assign this to" a teammate does exactly that.
+- **To move a task that is already running**, change the assignee. The first factory pushes its
+  work and lets go; the new owner's factory continues on the same branch and pull request.
+- **Anyone can comment** with answers or change requests. The owner's factory handles them.
+- The owner's factory must be running for anything to happen: an issue assigned to someone whose
+  factory is off simply waits.
+
 ## If you are an agent filing issues for someone
 
+- **Whose task it is.** By default the task is for the person who gave it to you: assign the
+  issue to them. If they say to give it to someone else, assign it to that person instead.
 - **Queue it straight away.** When the task is clear enough to write exact acceptance criteria,
   create the issue with the queue label without asking the person to confirm. Ask first only
   when it is too vague to write them.
 - **Attach what they showed you.** Add screenshots or recordings with `--attach` (see
-  **Troubleshooting and known issues**). Crop or blur anything private first: names, messages,
+  [troubleshooting](./conductorfactory/troubleshooting.md)). Crop or blur anything private first: names, messages,
   tokens.
 - **Use what you have.** With a command line, create the issue with `gh` (below). Without one
   (instinct, for example), do it in a browser signed in to GitHub: open the repository's Issues
@@ -207,37 +225,8 @@ through the channel they use with you, and nowhere else.
 
 ## Troubleshooting and known issues
 
-### Adding a screenshot or recording to an issue
-
-From the command line, with `--attach` (repeat it per file; `#` adds alt text to an image):
-
-```sh
-gh issue create --title "<title>" --body-file issue.md --label "factory:queue" \
-  --attach ./before.png --attach './after.png#The list after the fix'
-gh issue comment <number> --body "What it looks like now" --attach ./screen.mp4
-```
-
-To place an image at a point in the text, write a Markdown image in the body whose path is the
-local file, and attach the same file: the path is rewritten to the uploaded copy. Files the body
-does not mention are added at the end.
-
-Known issues:
-
-- **`unknown flag: --attach`** means the GitHub CLI is too old. Upgrade it (`brew upgrade gh`) and
-  check with `gh issue create --help`.
-- **Images and videos only.** Logs, PDFs, archives and other files are refused: paste the relevant
-  lines into the body as text instead.
-- **You need push access** to the repository to attach files.
-- **A video shows as a player only when it stands alone in its own paragraph**, and takes no alt text.
-- **If some files upload and others fail**, the issue or comment is still created without the
-  failed ones: read the command's output and add the missing files in a follow-up comment.
-- **In the browser instead:** open the issue, click into the description or a comment box, and
-  drag the file in or paste it from the clipboard. This is the fallback when the command line
-  cannot attach, the only way to attach a file type the command line refuses, and the only way
-  at all for an assistant without a command line (for example instinct), which must be signed in
-  to GitHub in its browser.
-- **Treat an upload as permanent.** Assume its link keeps working even if the comment is deleted
-  later, so crop or blur private details (names, messages, tokens) before attaching, never after.
+Attaching screenshots and videos (command line and browser), and what to check when several people
+share the repository, are in [`conductorfactory/troubleshooting.md`](./conductorfactory/troubleshooting.md).
 
 ## For whoever runs the factory
 
@@ -273,6 +262,7 @@ What is in the folder:
 | `conductorfactory/config.default.json` | Every setting and what it means |
 | `conductorfactory/config.json` | This repository's overrides (which agent and model the workers use is `sessions`) |
 | `conductorfactory/project.md` | This repository's rules for the agents |
+| `conductorfactory/troubleshooting.md` | Attaching files, and several people sharing the repository |
 
 The optional `conductorfactory` skill (Conductor Factory) only installs or updates this folder (`/conductorfactory setup`); nothing
 here runs from it.

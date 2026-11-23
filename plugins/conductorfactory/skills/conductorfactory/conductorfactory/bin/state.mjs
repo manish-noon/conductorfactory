@@ -18,6 +18,7 @@ import { PHASES, config, expectedStatus } from "./lib/config.mjs";
 import { setStatus } from "./lib/github-client.mjs";
 import { STATE_PATH, archiveEntry, logEvent, mergeEntry, readState } from "./lib/state-store.mjs";
 import { renderRunComment } from "./lib/run-comment.mjs";
+import { stateMarker } from "./lib/run-state.mjs";
 import { buildRunMetrics, renderMetricsComment } from "./lib/run-metrics.mjs";
 
 
@@ -53,7 +54,8 @@ const commands = {
   render([key]) {
     const entry = readState().issues[key];
     if (!entry) throw new Error(`No state entry for ${key}`);
-    return renderRunComment(entry, config.limits.maxRounds);
+    // The hidden marker keeps the run's essentials on GitHub (lib/run-state.mjs).
+    return `${renderRunComment(entry, config.limits.maxRounds)}\n\n${stateMarker(entry)}`;
   },
 };
 

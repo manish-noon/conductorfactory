@@ -10,6 +10,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ACTIVE_PHASES, config, expectedStatus } from "./lib/config.mjs";
+import { otherHome, takeLock } from "./lib/home-lock.mjs";
 import { STATE_PATH, readState } from "./lib/state-store.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +48,8 @@ function issueReasons(key, t, e) {
   if (t.feedback.length) r.push(`${key}: ${t.feedback.length} human comment(s)`);
   if (t.pr && ["MERGED", "CLOSED"].includes(t.pr.state)) r.push(`${key}: PR ${t.pr.state.toLowerCase()}`);
   if (t.guard === "closed") r.push(`${key}: issue closed`);
+  if (t.guard === "reassigned") r.push(`${key}: reassigned to ${t.assignees.join(", ")}`);
+  if (t.guard === "unassigned") r.push(`${key}: nobody assigned`);
   if (t.guard === "paused") r.push(`${key}: paused by a human`);
   if (t.guard === "resumed") r.push(`${key}: resumed`);
   if (t.guard === "drift") r.push(`${key}: labels are [${t.statusLabels.join(", ")}], expected "${expectedStatus(e.phase)}"`);
@@ -78,6 +81,12 @@ async function main() {
     console.log(`WATCHER ALREADY RUNNING (pid ${readFileSync(PID_FILE, "utf8")}); not starting a second one.`);
     process.exit(2);
   }
+  const other = otherHome();
+  if (other) {
+    console.log(`ANOTHER FACTORY HOME IS RUNNING for this login and repository (${other.path}). Stop it there (run stop) before starting this one. Do not start the watcher again; tell the human and end your turn.`);
+    process.exit(4);
+  }
+  takeLock();
   writeFileSync(PID_FILE, String(process.pid));
   const started = Date.now();
   let failures = 0;

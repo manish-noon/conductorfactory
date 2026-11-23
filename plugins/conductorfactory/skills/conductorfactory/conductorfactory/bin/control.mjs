@@ -4,13 +4,18 @@
 //   status   is it stopped, is the watcher running, and where each issue is
 //   stop     stop the factory: the watcher ends and refuses to start again, so the
 //            Coordinator routes nothing further. Sessions finish their current turn.
-//   start    check the setup, clear the stop flag, and print the one message that
-//            starts the Coordinator chat (the Coordinator then starts the watcher)
+//   start [--takeover]
+//            check the setup, clear the stop flag, and print the one message that
+//            starts the Coordinator chat (the Coordinator then starts the watcher).
+//            Refuses when this login's runs belong to another Factory home, unless
+//            --takeover: then this home adopts them.
 
 import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { FACTORY_DIR, FACTORY_HOME, FINAL_PHASES, config } from "./lib/config.mjs";
-import { ensureAllLabels } from "./lib/github-client.mjs";
+import { ensureAllLabels, viewer } from "./lib/github-client.mjs";
+import { dropLock, otherHome } from "./lib/home-lock.mjs";
+import { TAKEOVER_FILE, findWork } from "./lib/ownership.mjs";
 import { STATE_PATH, readState } from "./lib/state-store.mjs";
 
 const DIR = dirname(STATE_PATH);
@@ -32,7 +37,7 @@ function status() {
   const issues = Object.values(readState().issues)
     .filter((e) => !FINAL_PHASES.has(e.phase))
     .map((e) => ({ issue: e.key, title: e.title, phase: config.phases[e.phase]?.label ?? e.phase, round: e.round, pr: e.prUrl ?? null, workspace: e.workspaceUrl ?? null }));
-  return { factoryHome: FACTORY_HOME, stopped: existsSync(STOP_FILE), watcherPid: watcherPid(), queueLabel: config.github.queueLabel, issues };
+  return { factoryHome: FACTORY_HOME, owner: viewer(), stopped: existsSync(STOP_FILE), watcherPid: watcherPid(), queueLabel: config.github.queueLabel, issues };
 }
 
 const commands = {
@@ -42,12 +47,23 @@ const commands = {
     writeFileSync(STOP_FILE, `${new Date().toISOString()}\n`);
     const pid = watcherPid();
     if (pid) process.kill(pid, "SIGTERM");
+    dropLock();
     return { ...status(), watcherPid: null, stoppedWatcher: pid };
   },
   start() {
     const rules = join(FACTORY_DIR, "project.md");
     if (!existsSync(rules)) throw new Error("conductorfactory/project.md is missing: write this repository's rules first");
     if (/\bTODO\b/.test(readFileSync(rules, "utf8"))) throw new Error("conductorfactory/project.md still has a TODO: fill it in first");
+    const other = otherHome();
+    if (other) throw new Error(`Another Factory home is running for this login and repository: ${other.path}. Stop it there first (run stop).`);
+    rmSync(TAKEOVER_FILE, { force: true });
+    const takeover = process.argv.includes("--takeover");
+    const { foreign } = findWork(readState());
+    if (foreign.length && !takeover) {
+      const list = foreign.map((f) => `#${f.key} (${f.phase})`).join(", ");
+      throw new Error(`These runs of yours belong to another Factory home: ${list}. If that home is gone, run start --takeover to continue them here.`);
+    }
+    if (takeover) writeFileSync(TAKEOVER_FILE, `${new Date().toISOString()}\n`);
     ensureAllLabels();
     rmSync(STOP_FILE, { force: true });
     const s = status();

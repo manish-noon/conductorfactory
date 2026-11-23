@@ -6,7 +6,9 @@
 // uses: $FACTORY_HOME (set by conductorfactory/run), else the repository you run from.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,6 +23,9 @@ function repoRoot() {
 }
 
 export const FACTORY_HOME = process.env.FACTORY_HOME ?? repoRoot();
+// A short id for this Factory home, recorded with each run so one login's
+// second Factory home (another worktree or machine) is recognised.
+export const HOME_ID = createHash("sha1").update(`${hostname()}:${FACTORY_HOME}`).digest("hex").slice(0, 8);
 export const CONFIG_PATH = join(FACTORY_HOME, "conductorfactory", "config.json");
 const DEFAULT_PATH = join(FACTORY_DIR, "config.default.json");
 
@@ -33,6 +38,7 @@ const REQUIRED = [
   "conductor.section",
   "github.queueLabel", "github.pauseLabel", "github.needsHumanLabel", "github.sizeLabelPrefix",
   "github.outcomeLabels.autonomous", "github.outcomeLabels.assisted", "github.mergeMethod",
+  "github.claimFor", "github.handoverWaitMinutes",
   "evidence.attach", "phases", "sizes", "prices",
 ];
 

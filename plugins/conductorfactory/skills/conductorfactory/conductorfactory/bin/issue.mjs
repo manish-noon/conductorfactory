@@ -8,6 +8,8 @@
 //   issue size <N> <S|M|L|XL>               set the size label
 //   issue outcome <N> <autonomous|assisted> add the outcome label
 //   issue assign-me <N>                     assign to the gh user
+//   issue assign <N> <login>                hand it to another owner (their factory takes it over)
+//   issue owner <N>                         whose factory this issue belongs to, and whether it is this one
 //   issue comment <N> <file.md> [commentId] create, or edit in place
 //   issue evidence <N> <summary.md> <file>… post the evidence summary; images and videos are
 //                                           uploaded and shown inline, other files listed by path
@@ -17,6 +19,7 @@ import { resolve } from "node:path";
 import { config } from "./lib/config.mjs";
 import {
   addLabel,
+  assignTo,
   assignToMe,
   canAttach,
   commentWithFiles,
@@ -27,7 +30,10 @@ import {
   setPrefixedLabel,
   setStatus,
   upsertComment,
+  viewer,
 } from "./lib/github-client.mjs";
+import { ownerOf } from "./lib/ownership.mjs";
+import { readRunState } from "./lib/run-state.mjs";
 
 // Files that are not uploaded (logs, reports, or everything when gh is too old
 // for --attach) stay in the workspace; the comment says where.
@@ -62,6 +68,16 @@ const commands = {
   "assign-me"([key]) {
     assignToMe(key);
     return { ok: true, key };
+  },
+  assign([key, login]) {
+    if (!login) throw new Error("usage: issue assign <N> <login>");
+    assignTo(key, login.replace(/^@/, ""));
+    return { ok: true, key, owner: login.replace(/^@/, "") };
+  },
+  owner([key]) {
+    const issue = getIssue(key);
+    const owner = ownerOf(issue);
+    return { key, owner, mine: owner === viewer(), assignees: issue.assignees, run: readRunState(key) };
   },
   comment([key, file, commentId]) {
     const c = upsertComment(key, readFileSync(file, "utf8"), commentId);

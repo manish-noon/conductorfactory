@@ -20,14 +20,23 @@ function ghText(args, input) {
   }
 }
 
-function gh(args, input) {
+export function gh(args, input) {
   const out = ghText(args, input);
   return out ? JSON.parse(out) : null;
 }
 
-const api = (path) => gh(["api", `repos/{owner}/{repo}/${path}`]);
+export const api = (path) => gh(["api", `repos/{owner}/{repo}/${path}`]);
 // Every page of a list endpoint, as one array.
-const apiAll = (path) => gh(["api", "--paginate", "--slurp", `repos/{owner}/{repo}/${path}`]).flat();
+export const apiAll = (path) => gh(["api", "--paginate", "--slurp", `repos/{owner}/{repo}/${path}`]).flat();
+
+let login;
+// The GitHub login this factory acts as.
+export function viewer() {
+  login ??= ghText(["api", "user", "--jq", ".login"]);
+  return login;
+}
+
+export const repoName = () => gh(["repo", "view", "--json", "nameWithOwner"]).nameWithOwner;
 
 let defaultBranch;
 export function baseBranch() {
@@ -53,6 +62,7 @@ function summarize(i) {
     state: i.state,
     stateReason: i.stateReason ?? null,
     labels,
+    assignees: (i.assignees ?? []).map((a) => a.login),
     statusLabels: labels.filter((l) => STATUS_LABELS.has(l)),
     body: i.body ?? "",
   };
@@ -64,6 +74,11 @@ export const getIssue = (key) => summarize(gh(["issue", "view", String(key), "--
 export function listQueue() {
   const label = config.github.queueLabel;
   return gh(["issue", "list", "--label", label, "--state", "open", "--limit", "50", "--json", ISSUE_FIELDS]).map(summarize);
+}
+
+// Open issues assigned to this login (runs handed over from another owner show up here).
+export function listAssignedToMe() {
+  return gh(["issue", "list", "--assignee", "@me", "--state", "open", "--limit", "100", "--json", ISSUE_FIELDS]).map(summarize);
 }
 
 function editLabels(key, add, remove) {
@@ -104,6 +119,14 @@ export function removeLabel(number, label) {
 }
 
 export const assignToMe = (key) => void ghText(["issue", "edit", String(key), "--add-assignee", "@me"]);
+
+// Hand an issue to another owner: they become the only assignee.
+export function assignTo(key, login) {
+  const others = getIssue(key).assignees.filter((l) => l !== login);
+  const args = ["issue", "edit", String(key), "--add-assignee", login];
+  if (others.length) args.push("--remove-assignee", others.join(","));
+  ghText(args);
+}
 
 // Every label the factory uses, created (or updated) in the repository.
 export function ensureAllLabels() {
