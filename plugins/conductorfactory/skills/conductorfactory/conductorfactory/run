@@ -1,0 +1,11 @@
+#!/bin/sh
+# conductorfactory: the factory launcher. Everything it runs is in this folder,
+# so the repository needs nothing installed besides node and gh.
+#
+#   conductorfactory/run <start|stop|status|config|labels|events|watch|state|issue|pr|commit|gh> …
+#
+# Every factory session calls it by absolute path from the Factory home (the
+# checkout the Coordinator runs in), so they all use the same settings
+# (conductorfactory/config.json) and state, whatever checkout they work in.
+dir="$(cd "$(dirname "$0")" && pwd)"
+FACTORY_HOME="$(dirname "$dir")" exec node "$dir/bin/factory.mjs" "$@"

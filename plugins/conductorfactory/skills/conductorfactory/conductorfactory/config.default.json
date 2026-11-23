@@ -1,0 +1,83 @@
+{
+  "_about": "Factory defaults. A repository overrides any key in its own conductorfactory/config.json (deep-merged over this file). Scripts read the merged result through bin/lib/config.mjs, prompts through `<run> config <key>`. Never repeat a value from here in a prompt or script.",
+
+  "limits": {
+    "maxActive": 3,
+    "maxRounds": 5,
+    "maxVerifiers": 2,
+    "maxNudges": 1,
+    "maxStatusResets": 3,
+    "maxEvidenceFiles": 6,
+    "maxAdvice": 5,
+    "workspaceCreateRetries": 1
+  },
+
+  "watcher": { "pollSeconds": 120, "heartbeatMinutes": 30 },
+
+  "_git": "baseBranch null: the repository's default branch on GitHub.",
+  "git": { "baseBranch": null, "branchPrefix": "factory/" },
+
+  "sessions": { "agent": "claude", "model": "default" },
+
+  "_identity": "commitName/commitEmail null: commit as the git user. Every factory commit carries commitTrailer; a PR commit without it (and not authored by commitEmail) counts as a human push.",
+  "identity": {
+    "commitName": null,
+    "commitEmail": null,
+    "commitTrailer": "Factory-Built: true",
+    "commentPrefix": "factory_ai:",
+    "coordinatorMark": "factory_coordinator:"
+  },
+
+  "conductor": { "section": "Factory" },
+
+  "_github": "queueLabel: add it to an issue to hand it to the factory. pauseLabel: add it to pause; add queueLabel again to resume. dropGhHost: unset GH_HOST before calling gh (for machines where it holds an SSH host alias).",
+  "github": {
+    "queueLabel": "factory:queue",
+    "pauseLabel": "factory:paused",
+    "needsHumanLabel": "factory:needs-human",
+    "sizeLabelPrefix": "size:",
+    "outcomeLabels": { "autonomous": "factory:autonomous", "assisted": "factory:assisted" },
+    "labelColor": "5319E7",
+    "needsHumanLabelColor": "B60205",
+    "mergeMethod": "squash",
+    "dropGhHost": false
+  },
+
+  "_evidence": "attach: upload the evidence pass's images and videos to the issue comment (gh --attach, needs a recent gh). false keeps every file on this machine and lists paths instead.",
+  "evidence": { "attach": true },
+
+  "_phases": "status: the issue label `state phase` sets, replacing every other factory status label (null: leave the labels alone). active: counts against limits.maxActive. waitingOnHuman: billed as human time in the run metrics. final: the factory stops tracking the issue.",
+  "phases": {
+    "triaging":    { "label": "Triaging",                         "status": "factory:building",       "active": true },
+    "planning":    { "label": "Needs planning (waiting on you)",  "status": "factory:needs-planning", "waitingOnHuman": true },
+    "building":    { "label": "Building",                         "status": "factory:building",       "active": true },
+    "verifying":   { "label": "Verifying",                        "status": "factory:verifying",      "active": true },
+    "reviewing":   { "label": "Reviewing",                        "status": "factory:reviewing",      "active": true },
+    "awaiting_ci": { "label": "Waiting for CI",                   "status": "factory:reviewing",      "active": true },
+    "ready":       { "label": "In review (approve the PR)",       "status": "factory:in-review",      "waitingOnHuman": true },
+    "needs_human": { "label": "Needs human",                      "status": "factory:needs-human",    "waitingOnHuman": true },
+    "paused":      { "label": "Paused",                           "status": "factory:paused",         "waitingOnHuman": true },
+    "merged":      { "label": "Shipped",                          "status": "factory:shipped",        "final": true },
+    "canceled":    { "label": "Canceled",                         "status": null,                     "final": true }
+  },
+
+  "_sizes": "Upper bound (exclusive) of changed lines from `git diff --shortstat origin/<base>...HEAD`. Anything larger is XL.",
+  "sizes": { "S": 100, "M": 500, "L": 1000 },
+
+  "_prices": "USD per million tokens, Anthropic first-party rates. Cache writes are 1.25x input (5-minute) and 2x input (1-hour). Update when prices change.",
+  "prices": {
+    "claude-fable-5-2":  { "input": 8,   "output": 40,  "cacheRead": 0.2 },
+    "claude-fable-5-1":  { "input": 10,  "output": 50,  "cacheRead": 1 },
+    "claude-fable-5":    { "input": 10,  "output": 50,  "cacheRead": 1 },
+    "claude-opus-5-5":   { "input": 4,   "output": 20,  "cacheRead": 0.2 },
+    "claude-opus-5":     { "input": 5,   "output": 25,  "cacheRead": 0.5 },
+    "claude-opus-4-8":   { "input": 5,   "output": 25,  "cacheRead": 0.5 },
+    "claude-opus-4-7":   { "input": 5,   "output": 25,  "cacheRead": 0.5 },
+    "claude-opus-4-6":   { "input": 5,   "output": 25,  "cacheRead": 0.5 },
+    "claude-sonnet-5-5": { "input": 2,   "output": 10,  "cacheRead": 0.1 },
+    "claude-sonnet-5":   { "input": 2,   "output": 10,  "cacheRead": 0.2 },
+    "claude-sonnet-4-6": { "input": 3,   "output": 15,  "cacheRead": 0.3 },
+    "claude-haiku-5-5":  { "input": 0.1, "output": 0.5, "cacheRead": 0.01 },
+    "claude-haiku-4-5":  { "input": 1,   "output": 5,   "cacheRead": 0.1 }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "_about": "This repository's factory settings. Any key here overrides config.default.json in this folder (read that file for every setting and what it means). `conductorfactory/run config` prints the merged result.",
+
+  "git": { "baseBranch": null },
+
+  "limits": { "maxActive": 3, "maxRounds": 5, "maxVerifiers": 2 },
+
+  "github": { "queueLabel": "factory:queue", "mergeMethod": "squash" }
+}

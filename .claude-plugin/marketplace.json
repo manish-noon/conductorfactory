@@ -1,0 +1,12 @@
+{
+  "name": "conductorfactory",
+  "description": "Conductor Factory: a local software factory driven by GitHub issues",
+  "owner": { "name": "manish-noon" },
+  "plugins": [
+    {
+      "name": "conductorfactory",
+      "source": "./plugins/conductorfactory",
+      "description": "Label a GitHub issue and Conductor sessions triage, build, verify, review it and prepare the PR"
+    }
+  ]
+}
