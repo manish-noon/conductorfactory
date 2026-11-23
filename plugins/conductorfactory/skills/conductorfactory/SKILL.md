@@ -154,9 +154,9 @@ close the issue or its PR to cancel.
 
 ## Several people, one repository
 
-Each person runs their own factory under their own `gh` login. An issue's **owner is its
-assignee**; unassigned, it belongs to whoever added the queue label (plus logins listed in
-`github.claimFor`, for an assistant that files issues under its own account). A Coordinator only
+Each person runs their own factory under their own `gh` login. By default an issue's
+**owner is whoever created it**; only an explicit assignee changes that. (`github.claimFor` lists
+other logins whose issues this login takes, for an assistant that files under its own account.) A Coordinator only
 ever sees its own issues, so two factories never compete for one.
 
 - Give a task to someone: assign the issue to them (`<run> issue assign <N> <login>`, or on GitHub).

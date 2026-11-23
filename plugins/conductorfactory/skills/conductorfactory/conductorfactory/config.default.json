@@ -30,7 +30,7 @@
 
   "conductor": { "section": "Factory" },
 
-  "_github": "claimFor: other GitHub logins whose unassigned queued issues this login's factory also takes (e.g. an assistant that files issues under its own account). handoverWaitMinutes: how long to wait for the previous owner's factory to let go of a reassigned issue before taking it over anyway. queueLabel: add it to an issue to hand it to the factory. pauseLabel: add it to pause; add queueLabel again to resume. dropGhHost: unset GH_HOST before calling gh (for machines where it holds an SSH host alias).",
+  "_github": "claimFor: other GitHub logins whose unassigned issues this login's factory also takes, as if this login had created them (e.g. an assistant that files issues under its own account). handoverWaitMinutes: how long to wait for the previous owner's factory to let go of a reassigned issue before taking it over anyway. queueLabel: add it to an issue to hand it to the factory. pauseLabel: add it to pause; add queueLabel again to resume. dropGhHost: unset GH_HOST before calling gh (for machines where it holds an SSH host alias).",
   "github": {
     "queueLabel": "factory:queue",
     "pauseLabel": "factory:paused",

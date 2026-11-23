@@ -5,7 +5,7 @@ Work can be handed to a local software factory through GitHub issues. Create an 
 review it and open a pull request that closes the issue. Status, questions and test evidence come
 back as comments on the issue; the code and its review are on the pull request, which a human
 approves and merges. Several people can each run a factory here: an issue is built by the factory
-of the person it is assigned to, or of whoever queued it when it is unassigned.
+of the person who created it, unless it is explicitly assigned to someone else.
 
 The issue is the whole brief, so write it to be built: [`FACTORY.md`](./FACTORY.md) says what to
 put in it (problem, expected behaviour, exact acceptance criteria, what is out of scope) and what

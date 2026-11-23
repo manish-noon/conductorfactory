@@ -47,7 +47,7 @@ export function baseBranch() {
 
 // ---- issues ---------------------------------------------------------------
 
-const ISSUE_FIELDS = "number,title,url,state,stateReason,body,labels,assignees";
+const ISSUE_FIELDS = "number,title,url,state,stateReason,body,labels,assignees,author";
 
 const slug = (title) =>
   title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
@@ -62,6 +62,7 @@ function summarize(i) {
     state: i.state,
     stateReason: i.stateReason ?? null,
     labels,
+    author: i.author?.login ?? null,
     assignees: (i.assignees ?? []).map((a) => a.login),
     statusLabels: labels.filter((l) => STATUS_LABELS.has(l)),
     body: i.body ?? "",

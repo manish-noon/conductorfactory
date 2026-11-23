@@ -35,7 +35,7 @@ Known issues:
 ## Several people, one repository
 
 - **An issue nobody picks up.** It is assigned to someone whose factory is not running, or it is
-  unassigned and was queued by a login no factory claims for. `conductorfactory/run issue owner
+  unassigned and was created by a login no factory claims for. `conductorfactory/run issue owner
   <number>` says who owns it; assign it to someone whose factory is running.
 - **`start` says the runs belong to another Factory home.** This login already ran them from
   another checkout or machine. Stop that one, or if it is gone run `conductorfactory/run start

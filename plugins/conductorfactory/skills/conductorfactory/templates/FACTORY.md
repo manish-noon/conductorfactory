@@ -105,9 +105,11 @@ Add the repository's usual labels (area, priority) as well. To queue an existing
 
 Each person runs their own factory under their own GitHub login, and every issue has one owner:
 
-- **The owner is the issue's assignee.** Assign the issue to a person and their factory builds it.
-- **Unassigned, it belongs to whoever added `factory:queue`**; their factory assigns it to them
-  when it starts.
+- **By default the owner is whoever created the issue.** Leave it unassigned and the creator's
+  factory picks it up, and assigns it to them when it starts. Who adds `factory:queue` does not
+  matter.
+- **Only an explicit assignee changes that.** Assign the issue to someone else and their factory
+  builds it instead.
 - **To give a task to someone else**, assign it to them when you queue it:
   `gh issue create … --label "factory:queue" --assignee <their login>`, or pick them under
   Assignees in the browser. An assistant told "assign this to" a teammate does exactly that.
@@ -119,8 +121,9 @@ Each person runs their own factory under their own GitHub login, and every issue
 
 ## If you are an agent filing issues for someone
 
-- **Whose task it is.** By default the task is for the person who gave it to you: assign the
-  issue to them. If they say to give it to someone else, assign it to that person instead.
+- **Whose task it is.** By default leave the issue unassigned: it then belongs to its creator.
+  Assign it only when the person names someone else, or when you create issues under an account
+  that is not theirs (then assign it to them).
 - **Queue it straight away.** When the task is clear enough to write exact acceptance criteria,
   create the issue with the queue label without asking the person to confirm. Ask first only
   when it is too vague to write them.
