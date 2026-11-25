@@ -2,11 +2,12 @@
 // The Coordinator's watcher. Run it as a background command; it polls every
 // watcher.pollSeconds (the factory config) with no model cost and EXITS only
 // when there is work, printing why plus the poll JSON. Exiting is what wakes the
-// Coordinator. It also exits every watcher.heartbeatMinutes so the Coordinator
-// can check session health, which no script can see.
+// Coordinator. While issues are in flight it also exits every
+// watcher.heartbeatMinutes so the Coordinator can check session health, which no
+// script can see. Poll failures never wake it: it backs off and keeps polling.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ACTIVE_PHASES, config, expectedStatus } from "./lib/config.mjs";
@@ -87,6 +88,7 @@ async function main() {
     process.exit(4);
   }
   takeLock();
+  mkdirSync(dirname(PID_FILE), { recursive: true });
   writeFileSync(PID_FILE, String(process.pid));
   const started = Date.now();
   let failures = 0;
@@ -97,11 +99,17 @@ async function main() {
       const why = reasons(p, readState());
       if (why.length) wake(why, p);
     } catch (err) {
-      if (++failures >= 3) wake([`poll failing: ${String(err.message).slice(0, 300)}`], null);
+      // GitHub or the network is down: an agent woken now would fail the same way, so
+      // keep polling with backoff (up to 10 minutes) and wake only when there is work.
+      failures++;
+      console.error(`poll failed (${failures}): ${String(err.message).slice(0, 300)}`);
     }
     if (existsSync(STOP_FILE)) stopped();
-    if (Date.now() - started >= HEARTBEAT_MS) wake(["heartbeat: check session states (section C)"], null);
-    await sleep(POLL_MS);
+    // The heartbeat lets the Coordinator check session health; with nothing in
+    // flight there are no sessions to check, so it never wakes an idle factory.
+    const inFlight = Object.values(readState().issues).some((e) => ACTIVE_PHASES.has(e.phase));
+    if (failures === 0 && inFlight && Date.now() - started >= HEARTBEAT_MS) wake(["heartbeat: check session states (section C)"], null);
+    await sleep(failures ? Math.min(POLL_MS * 2 ** failures, 600000) : POLL_MS);
   }
 }
 
