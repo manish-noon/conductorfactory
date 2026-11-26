@@ -17,6 +17,9 @@ import { STATE_PATH, readState } from "./lib/state-store.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const POLL_MS = config.watcher.pollSeconds * 1000;
 const HEARTBEAT_MS = config.watcher.heartbeatMinutes * 60000;
+// Exit cleanly well before any shell time limit, so the Coordinator restarts it
+// on a known schedule instead of the harness killing it.
+const RESTART_MS = config.watcher.restartMinutes * 60000;
 const MAX_ACTIVE = config.limits.maxActive;
 const PID_FILE = join(dirname(STATE_PATH), "watch.pid");
 // Written by `stop`, removed by `start` (bin/control.mjs).
@@ -121,6 +124,11 @@ async function main() {
     // flight there are no sessions to check, so it never wakes an idle factory.
     const inFlight = Object.values(readState().issues).some((e) => ACTIVE_PHASES.has(e.phase));
     if (failures === 0 && inFlight && Date.now() - started >= HEARTBEAT_MS) wake(["heartbeat: check session states (section C)"], null);
+    if (Date.now() - started >= RESTART_MS) {
+      console.log(`RESTART: scheduled restart after ${config.watcher.restartMinutes} minutes, nothing to do. Start the watcher again now (\`watch\`); this is not a stop.`);
+      rmSync(PID_FILE, { force: true });
+      process.exit(0);
+    }
     await sleep(failures ? Math.min(POLL_MS * 2 ** failures, 600000) : POLL_MS);
   }
 }
