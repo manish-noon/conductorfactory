@@ -152,7 +152,7 @@ The poll compares the issue's state and status labels (`statusLabels`) with `pha
 ### G. Morning digest and cleanup (a `digest` wake, or the human asks for either)
 
 1. `<run> digest` and post its `message` in this chat exactly as printed (the boxed table), then one plain line on anything it cannot show.
-2. Cleanup: `ListRepositories`, then `ListWorkspaces` with every repository id (follow `nextCursor`), and pipe `[{id, name, branch, path}]` as JSON to `<run> cleanup -`. Post its `message` as printed. Archive (`ArchiveWorkspaces`) only the ids the human says yes to in this chat; never archive without that reply, and never the Factory home or a workspace with a running chat the human started.
+2. Cleanup: `ListRepositories`, then `ListWorkspaces` with every repository id (follow `nextCursor`), and pipe `[{id, name, branch, path}]` as JSON to `<run> cleanup -`. Post its `message` as printed. It lists only the factory's own workspaces. Archive (`ArchiveWorkspaces`) only ids from its `archive` list that the human says yes to in this chat. **Never archive a workspace the factory did not create**, the Factory home, or one with a running chat the human started.
 3. If both say nothing needs the human, post a single line instead of two tables.
 
 ## Hand over (the issue was reassigned)

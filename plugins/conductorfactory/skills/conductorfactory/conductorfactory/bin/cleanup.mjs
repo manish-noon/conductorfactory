@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Finds Conductor workspaces whose pull request is merged or closed, in any
-// repository. Conductor's workspace list is only visible to an agent, so the
+// Finds the factory's own Conductor workspaces (branch starts with
+// git.branchPrefix) whose pull request is merged or closed, in any repository.
+// Workspaces the factory did not create are never listed. Conductor's workspace list is only visible to an agent, so the
 // Coordinator passes it in (ListWorkspaces across every repository, as JSON):
 //
 //   cleanup '<json array of {id, name, branch, path}>'   or   cleanup - (stdin)
@@ -13,7 +14,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { FACTORY_HOME } from "./lib/config.mjs";
+import { FACTORY_HOME, config } from "./lib/config.mjs";
 import { GH_ENV } from "./lib/github-client.mjs";
 import { ICON, box } from "./lib/box.mjs";
 
@@ -54,7 +55,7 @@ function unsaved(ws, pr) {
 const found = [];
 const kept = [];
 for (const ws of workspaces) {
-  if (!ws.branch || !ws.path || ws.path === FACTORY_HOME || !existsSync(ws.path)) continue;
+  if (!ws.branch?.startsWith(config.git.branchPrefix) || !ws.path || ws.path === FACTORY_HOME || !existsSync(ws.path)) continue;
   const pr = prFor(ws);
   if (!pr || !["MERGED", "CLOSED"].includes(pr.state)) continue;
   const why = unsaved(ws, pr);
@@ -65,7 +66,7 @@ const keptNote = kept.length
   ? `\n${ICON.info} Kept, PR finished but work would be lost: ${kept.map(({ ws, why }) => `${ws.name} (${why})`).join("; ")}.`
   : "";
 if (!found.length) {
-  console.log(JSON.stringify({ message: `${ICON.done} Nothing to clean up: no workspace has a merged or closed PR.${keptNote}`, archive: [] }));
+  console.log(JSON.stringify({ message: `${ICON.done} Nothing to clean up: no factory workspace has a merged or closed PR.${keptNote}`, archive: [] }));
   process.exit(0);
 }
 const rows = [["", "Repo", "Workspace", "PR"], ...found.map(({ ws, pr, repo }) => [pr.state === "MERGED" ? ICON.done : ICON.fail, repo, ws.name.slice(0, 40), `#${pr.number} ${pr.state === "MERGED" ? "merged" : "closed"}`])];

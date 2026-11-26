@@ -68,7 +68,7 @@ Commands, all as `<Factory home>/conductorfactory/run <command> …`:
 | `stop` | Stop the watcher and keep it stopped |
 | `status` | Is it running, and where each issue is |
 | `digest` | A boxed table of every issue waiting on you and what to do; the Coordinator posts it every morning (`watcher.digestHour`) |
-| `cleanup -` | Given Conductor's workspace list on stdin, a boxed table of workspaces in any repository whose PR is merged or closed, and their ids |
+| `cleanup -` | Given Conductor's workspace list on stdin, a boxed table of the factory's own workspaces (any repository) whose PR is merged or closed, and their ids; never anything outside the factory |
 | `config [key]` | The merged settings, or one value |
 | `labels` | Create every factory label on GitHub |
 | `events` | One poll: new issues, labels and status guard, PR + CI, worker results, human comments |
@@ -157,8 +157,8 @@ Nothing is lost: `/conductorfactory start` continues where it stopped.
 ### `/conductorfactory cleanup`
 
 `ListRepositories`, then `ListWorkspaces` with every repository id (follow `nextCursor`); pipe
-`[{id, name, branch, path}]` as JSON to `<run> cleanup -` and show its `message` as printed. Archive
-only the workspaces the user says yes to. The Coordinator offers the same every morning.
+`[{id, name, branch, path}]` as JSON to `<run> cleanup -` and show its `message` as printed. It lists only
+the factory's own workspaces; never archive anything outside the factory. Archive only the ones the user says yes to. The Coordinator offers the same every morning.
 
 ### `/conductorfactory status`
 
