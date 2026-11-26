@@ -32,7 +32,7 @@ const DEFAULT_PATH = join(FACTORY_DIR, "config.default.json");
 const REQUIRED = [
   "limits.maxActive", "limits.maxRounds", "limits.maxVerifiers", "limits.maxNudges",
   "limits.maxStatusResets", "limits.maxEvidenceFiles", "limits.maxAdvice", "limits.workspaceCreateRetries",
-  "watcher.pollSeconds", "watcher.heartbeatMinutes",
+  "watcher.pollSeconds", "watcher.heartbeatMinutes", "watcher.digestHour",
   "git.branchPrefix", "sessions.agent", "sessions.model",
   "identity.commitTrailer", "identity.commentPrefix", "identity.coordinatorMark",
   "conductor.section",

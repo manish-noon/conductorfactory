@@ -66,6 +66,8 @@ Commands, all as `<Factory home>/conductorfactory/run <command> …`:
 | `start [--takeover]` | Check the setup, make sure the labels exist, clear a previous stop, print the message that starts the Coordinator chat. Refuses if this login's runs belong to another Factory home, unless `--takeover` |
 | `stop` | Stop the watcher and keep it stopped |
 | `status` | Is it running, and where each issue is |
+| `digest` | A boxed table of every issue waiting on you and what to do; the Coordinator posts it every morning (`watcher.digestHour`) |
+| `cleanup -` | Given Conductor's workspace list on stdin, a boxed table of workspaces in any repository whose PR is merged or closed, and their ids |
 | `config [key]` | The merged settings, or one value |
 | `labels` | Create every factory label on GitHub |
 | `events` | One poll: new issues, labels and status guard, PR + CI, worker results, human comments |
@@ -142,6 +144,12 @@ Does everything a repository needs, once. Do each step; skip one only when it is
 Sessions already working finish their current turn; their results wait in the state file and are
 picked up on the next start. Report the issues that were in flight (from the printed status).
 Nothing is lost: `/conductorfactory start` continues where it stopped.
+
+### `/conductorfactory cleanup`
+
+`ListRepositories`, then `ListWorkspaces` with every repository id (follow `nextCursor`); pipe
+`[{id, name, branch, path}]` as JSON to `<run> cleanup -` and show its `message` as printed. Archive
+only the workspaces the user says yes to. The Coordinator offers the same every morning.
 
 ### `/conductorfactory status`
 

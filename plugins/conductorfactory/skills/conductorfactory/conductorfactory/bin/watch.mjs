@@ -21,6 +21,17 @@ const MAX_ACTIVE = config.limits.maxActive;
 const PID_FILE = join(dirname(STATE_PATH), "watch.pid");
 // Written by `stop`, removed by `start` (bin/control.mjs).
 const STOP_FILE = join(dirname(STATE_PATH), "stopped");
+// The day of the last morning digest (YYYY-MM-DD, local time), so it wakes once a day.
+const DIGEST_FILE = join(dirname(STATE_PATH), "digest-day");
+
+function digestDue() {
+  const now = new Date();
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (now.getHours() < config.watcher.digestHour) return false;
+  if (existsSync(DIGEST_FILE) && readFileSync(DIGEST_FILE, "utf8").trim() === day) return false;
+  writeFileSync(DIGEST_FILE, day);
+  return true;
+}
 
 function stopped() {
   console.log("STOPPED: the factory was stopped (`stop`). Do not start the watcher again; end your turn. `start` clears this.");
@@ -105,6 +116,7 @@ async function main() {
       console.error(`poll failed (${failures}): ${String(err.message).slice(0, 300)}`);
     }
     if (existsSync(STOP_FILE)) stopped();
+    if (failures === 0 && digestDue()) wake(["digest: post the morning digest and cleanup (section G)"], null);
     // The heartbeat lets the Coordinator check session health; with nothing in
     // flight there are no sessions to check, so it never wakes an idle factory.
     const inFlight = Object.values(readState().issues).some((e) => ACTIVE_PHASES.has(e.phase));

@@ -12,7 +12,8 @@
     "workspaceCreateRetries": 1
   },
 
-  "watcher": { "pollSeconds": 120, "heartbeatMinutes": 30 },
+  "_watcher": "digestHour: local hour (0-23) after which the watcher wakes the Coordinator once a day for the morning digest and cleanup.",
+  "watcher": { "pollSeconds": 120, "heartbeatMinutes": 30, "digestHour": 9 },
 
   "_git": "baseBranch null: the repository's default branch on GitHub.",
   "git": { "baseBranch": null, "branchPrefix": "factory/" },

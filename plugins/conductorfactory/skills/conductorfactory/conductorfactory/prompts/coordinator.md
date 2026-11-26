@@ -19,6 +19,7 @@ Every setting lives in the factory config (`conductorfactory/config.default.json
 ## Tools
 
 - `<run> watch`: the watcher (see **The watch loop**). `<run> events`: one poll on demand (new issues, issue labels and the status guard, PR + CI, unprocessed worker results, new human feedback).
+- `<run> digest` and `<run> cleanup`: the boxed tables for section G.
 - `<run> state show|set|log|phase|render|archive|metrics`: your state file, `.context/factory/state.json`.
 - `<run> issue status|size|outcome|assign-me|assign|owner|comment`: issue writes, and whose issue it is. One status label carries the factory stage; the only other labels you set are size and outcome.
 - `<run> pr comment|label|unlabel <pr> …`: PR comments and labels. `<run> gh …` for everything else on GitHub.
@@ -51,7 +52,7 @@ The issue's status label is how humans read the factory. **`<run> state phase <K
 Never use `/loop` or scheduled prompts: each firing would land in this chat and fill your context even when nothing happened. Instead:
 
 1. Start the watcher: `<run> watch`. It polls every `watcher.pollSeconds` with no model cost and **exits only when there is work**, printing `WAKE: <reasons>` and the poll JSON. While issues are in flight it also exits every `watcher.heartbeatMinutes` as a heartbeat. GitHub or network failures never wake you: it backs off and keeps polling. Run it as a **background** command with the longest timeout your shell tool allows (two hours is enough) if your harness wakes you when a background command exits; otherwise run it in the foreground with the longest timeout allowed and wait for it. If the timeout cuts it off before it prints `WAKE`, just start it again.
-2. On a wake, run one tick with the printed poll (sections A–F; a heartbeat needs only section C). Keep quiet ticks to a line.
+2. On a wake, run one tick with the printed poll (sections A–F; a heartbeat needs only section C; a digest needs only section G). Keep quiet ticks to a line.
 3. Start the watcher again. Exactly one watcher runs at a time; a second one refuses to start (`WATCHER ALREADY RUNNING`). If it says that, do nothing more. `ANOTHER FACTORY HOME IS RUNNING` means this login already runs a factory for this repository from another checkout: tell the human which one and end your turn.
 4. If the watcher prints `STOPPED`, a human stopped the factory (`conductorfactory/run stop`): do not start it again, send nothing to any session, and end your turn with one line. `conductorfactory/run start` brings you back.
 
@@ -147,6 +148,12 @@ The poll compares the issue's state and status labels (`statusLabels`) with `pha
 - **`paused`** → a human added `github.pauseLabel`: store `pausedFrom` (the current phase), phase `paused`, send no more messages, keep the workspace.
 - **`resumed`** → a paused issue got `github.queueLabel` again: phase back to `pausedFrom` (which sets its label) and continue (re-send the last pending step if nothing is running).
 - **`drift`** → the status label was removed, changed, or another one was added: set it back with `<run> issue status <KEY> <phases.<phase>.status>` and `<run> state log <KEY> status_reset '{"from":"<statusLabels>"}'`. If the same issue is reset more than `limits.maxStatusResets` times, mention it in the run comment so the human can find what keeps changing it.
+
+### G. Morning digest and cleanup (a `digest` wake, or the human asks for either)
+
+1. `<run> digest` and post its `message` in this chat exactly as printed (the boxed table), then one plain line on anything it cannot show.
+2. Cleanup: `ListRepositories`, then `ListWorkspaces` with every repository id (follow `nextCursor`), and pipe `[{id, name, branch, path}]` as JSON to `<run> cleanup -`. Post its `message` as printed. Archive (`ArchiveWorkspaces`) only the ids the human says yes to in this chat; never archive without that reply, and never the Factory home or a workspace with a running chat the human started.
+3. If both say nothing needs the human, post a single line instead of two tables.
 
 ## Hand over (the issue was reassigned)
 

@@ -4,7 +4,7 @@
 //
 //   <Factory home>/conductorfactory/run <command> [args…]
 //
-// Commands: config, issue, pr, state, events, watch, commit, gh, labels, and
+// Commands: config, issue, pr, state, events, watch, commit, gh, labels, cleanup, digest, and
 // start, stop, status (bin/control.mjs).
 // Run it from the checkout the command should act on (git and gh use the cwd).
 
@@ -12,7 +12,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const COMMANDS = ["config", "issue", "pr", "state", "events", "watch", "commit", "gh", "labels", "start", "stop", "status"];
+const COMMANDS = ["config", "issue", "pr", "state", "events", "watch", "commit", "gh", "labels", "cleanup", "digest", "start", "stop", "status"];
 const CONTROL = ["start", "stop", "status"];
 const [command] = process.argv.splice(2, 1);
 if (CONTROL.includes(command)) process.env.FACTORY_COMMAND = command;
