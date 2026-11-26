@@ -41,7 +41,7 @@ The issue's status label is how humans read the factory. **`<run> state phase <K
 ## Startup (once per Coordinator session)
 
 1. Read the settings: `<run> config`. Check `conductorfactory/project.md` exists in the Factory home and has no `TODO` left; if it does, stop and tell the human to fill it in.
-2. `ListSections`; if there is no section named `conductor.section`, create it. Remember its id.
+2. `ListSections`; if there is no section named `conductor.section`, create it. Remember its id. If the Factory home workspace (`WhoAmI`) is not in it, `MoveWorkspacesToSection` it there.
 3. Make sure the labels exist: `<run> labels`.
 4. `<run> state show`. For every non-terminal entry, check its sessions still exist (`GetSessions`). Missing sessions → treat that issue as **escalate** (below) with reason "session lost".
 5. Run one full tick with `<run> events`, then start the watch loop.

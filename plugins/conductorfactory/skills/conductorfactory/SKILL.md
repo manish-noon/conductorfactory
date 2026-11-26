@@ -125,8 +125,10 @@ Does everything a repository needs, once. Do each step; skip one only when it is
    first. If it fails, report its message; when it says the runs belong to another Factory home,
    ask the user whether that home is gone before running `<run> start --takeover`. If `watcherPid` is set, a Coordinator is already
    running here: say so and stop.
-2. Start the Coordinator in its **own chat**, so this one stays clean: with Conductor's
-   `CreateSession` in this workspace, title `Factory Coordinator`, and the printed
+2. Put this workspace (the Factory home) in the factory's sidebar section: `ListSections`; create
+   the section named `<run> config conductor.section` if it is missing; `MoveWorkspacesToSection`
+   with this workspace's id (`WhoAmI`). Then start the Coordinator in its **own chat**, so this one
+   stays clean: with Conductor's `CreateSession` in this workspace, title `Factory Coordinator`, and the printed
    `coordinatorMessage` as its message, word for word. If a `Factory Coordinator` chat already
    exists and is idle, send it that message instead. Without Conductor's session tools, become
    the Coordinator in this chat: read the file the message names and follow it.
