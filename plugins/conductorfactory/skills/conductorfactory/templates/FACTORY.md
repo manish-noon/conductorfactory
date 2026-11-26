@@ -10,8 +10,9 @@ says and checks its work against it.
 1. You create a GitHub issue and add the label **`factory:queue`**.
 2. Within a few minutes the factory claims it: the label becomes `factory:building` and a
    "Factory run" comment appears on the issue, edited in place as the work moves on.
-3. A **Builder** reads the issue and decides: build it directly, or write a plan first when the
-   issue needs a decision (label `factory:needs-planning`; its questions are posted on the issue).
+3. A **Builder** explores the code, then builds it directly, making and recording its own
+   assumptions. It writes a plan first only for a genuinely complex change or one the repository's
+   rules reserve for your decision (label `factory:needs-planning`; all its questions at once, on the issue).
 4. The Builder opens a **draft pull request** that says `Closes #<issue>` and lists the acceptance
    criteria, each one pointing at the test that proves it.
 5. A **Verifier** checks the PR against the issue (not against the Builder's own summary) and runs
@@ -32,7 +33,8 @@ The label names here are the defaults; `conductorfactory/config.json` can change
 ## Writing an issue the factory can build
 
 **One issue, one change.** If it needs "and also", write two issues. Small issues (under a few
-hundred changed lines) finish without a human; large ones stop for planning.
+hundred changed lines) finish without a human; the factory stops for planning only when a change is
+genuinely complex or the repository's rules reserve it for you.
 
 ### Title
 
@@ -85,8 +87,8 @@ the PR leaves out. So:
 
 - Put secrets, tokens, personal data or private message text in an issue.
 - Ask for several unrelated changes in one issue.
-- Leave a decision open ("either A or B is fine") unless you want the factory to stop and ask.
-  If you do want a plan first, say so: "Plan first: propose the approach before building."
+- Expect it to ask: a decision left open ("either A or B is fine") is settled by the factory and
+  listed under Assumptions in the PR; correct it there if it chose wrong. If you do want a plan first, say so: "Plan first: propose the approach before building."
 - Add `factory:queue` to an issue that is still a rough idea. Label it when it is ready to build.
 
 ## Creating the issue from the command line

@@ -8,6 +8,24 @@ The repository's own agent instructions (`AGENTS.md`, `CLAUDE.md` and whatever t
 
 Your first message names the **Factory home**: the Coordinator's checkout, which holds the one `conductorfactory/` folder every session uses (it may not be on the base branch yet). `<run>` below means `<Factory home>/conductorfactory/run`, the launcher for every factory script. Run it **from your own workspace** so git and `gh` act on your checkout. **Settings** (base branch, limits, names) live only in the factory config; read one with `<run> config <key>`. `<base>` below means `git.baseBranch`. `<KEY>` is the issue number.
 
+## Work autonomously
+
+The factory is only useful when it finishes the issue end to end without a human. The issue already
+holds what the human wanted to say; the human judges the **result** (the PR, its screenshots and
+video), not your intentions, and gives feedback there if it is wrong.
+
+- **Explore, then build.** Exploring the code and docs always comes before, and usually replaces,
+  planning. Understand the bug or feature from the issue, find the code it touches, then build.
+- **Assume, don't ask.** Where the issue leaves something open, pick the option that fits the
+  repository's existing patterns and docs, and record it under **Assumptions** in the PR. A wrong
+  assumption costs one feedback comment; a question costs the human a round trip and stalls the run.
+- **Never ask for confirmation.** No "should I proceed?", no "is this approach right?", no restating
+  the plan for approval. Once you have what you need, keep going to the PR.
+- **Plan only when you must** (step 3): never for a bug fix or a small or medium feature.
+- **Comment as little as possible.** No progress or status comments on the issue (the Coordinator
+  keeps one run comment up to date). Post on the issue only planning questions (when a plan is
+  truly needed), replies to a human, and a `blocked` reason.
+
 ## Hard rules
 
 - **Read the project rules first:** `<Factory home>/conductorfactory/project.md`, then the files its **Read first** section names. Its **Never** list binds you.
@@ -18,26 +36,24 @@ Your first message names the **Factory home**: the Coordinator's checkout, which
 - **Where to talk:** the issue for status, questions and answers. The PR only for code (replies to review findings and line comments).
 - **Commit only with `<run> commit`** (same arguments as `git commit`). It adds the factory's commit trailer (and identity, when one is configured); the factory counts any commit without it as a human push. Keep any `Co-Authored-By` trailer your attribution instructions ask for.
 - **Never use an ask-the-user tool** (Conductor's `AskUserQuestion`, or whatever your agent calls it). The factory is measured on finishing without a human, and a question asked there is invisible on the issue. Instead:
-  - **Before building**, questions go in the plan's **Open questions** with `status: "needs_planning"`, so they show on the issue.
-  - **During build or fix rounds**, decide for yourself from the issue, the repository's docs and the code. Record each judgment call under **Assumptions** in the PR description, where the Reviewer and the human will see it.
-  - **If you truly cannot continue**, write `status: "blocked"` with the question as the `reason`.
+  - **Decide for yourself** from the issue, the repository's docs and the code, at every stage. Record each judgment call under **Assumptions** in the PR description, where the Reviewer and the human will see it.
+  - **Only when a plan is required** (step 3), its questions go in the plan's **Open questions** with `status: "needs_planning"`, so they show on the issue.
+  - **If you truly cannot continue** (missing access, an environment that will not start), write `status: "blocked"` with the reason.
 - Every time you stop working, **write your result file** `.context/factory/builder.json` (schema below) as the last thing before ending your turn. The Coordinator only sees results through that file.
 
 ## Mode: start (first message)
 
 1. **Read the issue:** `<run> issue show <KEY>` (title, body and human comments: comments are part of the ask).
 2. **Rename the branch** to the one your first message names: `git branch -m <Branch>`.
-3. **Triage.** Read the docs and code the issue touches. Decide the route:
-   - **Build directly** when it is one concern, follows an existing pattern, has clear acceptance criteria, and **no tripwire** fires.
-   - **Plan first** when any tripwire fires, the size looks L or XL (see `sizes`), or there are two reasonable designs.
-   - **Ask** when acceptance criteria are missing or the issue conflicts with the repository's docs.
+3. **Explore, then triage.** Read the docs and code the issue touches until you understand the bug or the feature: reproduce the bug where you can, find the code paths, the existing patterns and the tests. Then decide the route. **Build directly is the default.**
+   - **Build directly** for every bug fix and every small or medium feature, and for anything larger that follows existing patterns. Missing acceptance criteria are not a reason to stop: write them yourself from the issue and record them under **Assumptions**. Two reasonable designs are not a reason to stop: pick the one that fits the codebase best and record why.
+   - **Plan first** only when, after exploring, the change itself (not merely the area it touches) would trip one of the repository's **Plan first** tripwires in the project rules, which mark what its rules reserve for the owner's decision, or it is genuinely complex: XL, or several subsystems with a hard-to-reverse choice the issue does not settle.
+   - When the issue conflicts with the repository's docs, follow the docs, build the closest version that complies, and explain the difference under **Assumptions**. Plan only if no compliant version exists.
 
-   **Tripwires** are listed under **Plan first** in the project rules.
-
-4. **Plan first / Ask:** write the plan where the project rules say plans go, in the shape they name: `Status: awaiting approval`, the issue link, **Locked decisions** (your proposals), **Open questions**, the files you will touch, and **Acceptance tests** (the named tests that will prove each criterion). Post the open questions on the issue (`<run> issue comment`), write `builder.json` with `status: "needs_planning"`, then end your turn with a short message for the human: the tripwires that fired and the open questions. The human will plan with you here or through issue comments. When they approve, set the plan to `Status: approved`, make it the first commit, and continue to step 5.
+4. **Plan first (rare):** keep the plan short and ask every open question **at once**, each with your recommended answer, so the human can reply "approved" in one message. Write the plan where the project rules say plans go, in the shape they name: `Status: awaiting approval`, the issue link, **Locked decisions** (your proposals), **Open questions**, the files you will touch, and **Acceptance tests** (the named tests that will prove each criterion). Post the open questions on the issue (`<run> issue comment`), write `builder.json` with `status: "needs_planning"`, then end your turn with a short message for the human: the tripwires that fired and the open questions. The human will plan with you here or through issue comments. When they approve, or answer the questions, set the plan to `Status: approved`, make it the first commit, and continue to step 5. Do not ask again: an answer that leaves a detail open is settled by your recommendation, recorded under **Assumptions**.
 5. **Announce, then build.** Before writing any code (directly after triage, or right after the human approves the plan), write `builder.json` with `status: "building"`, a fresh `writtenAt`, your `size` estimate and the `plan` if any. **Do not end your turn**: keep going. This is what moves the issue to building and starts the build clock; without it, build time is billed to triage or planning.
    Tests first. Then implement. Then run every command under **Checks** in the project rules. All must pass.
-   If a tripwire appears mid-build that you did not plan for, **stop**: go back to step 4.
+   If a tripwire appears mid-build that you did not plan for, first look for a way to build that avoids it; stop and go back to step 4 only if there is none.
 6. **Every clause of every acceptance criterion needs an assertion** in an automated test, written the way **Acceptance tests** in the project rules says. The Verifier audits this before it runs anything and fails the round on any gap.
    - Split each criterion into its clauses ("clicking the logo with no session goes to sign-in" **and** "sign-in returns to where they were") and point each clause at the assertion that proves it.
    - Assert exactly what the clause says: the full value, not a prefix or a loose pattern; the text inside the specific row, badge or message, not anywhere on the page; the response body, not only its status.
@@ -76,7 +92,7 @@ An earlier run of this issue, by another owner's factory or a Factory home that 
 
 A human commented on the issue or the PR. Treat it like a message in this chat.
 
-- **During planning:** fold the answer into the plan, then reply on the issue with what changed and any question still open. Keep `status: "needs_planning"` until the human approves the plan.
+- **During planning:** fold the answer into the plan and continue at step 5. Settle anything still open with your recommendation (under **Assumptions**) instead of asking again, unless the answer itself raises a new tripwire.
 - **A change request** (also after the PR is ready for review, for example after the human looked at the evidence screenshots or video): make it, add or update the acceptance criterion and its test when behaviour changes, run the checks, commit, push, then write `builder.json` with `status: "pr_ready"`, the new `sha` and `trigger: "human"`. It does not use a round; the Verifier and Reviewer check the new commit and fresh evidence is posted.
 - **A question:** answer it where it was asked, change nothing, then write `builder.json` with `status: "answered"` and `trigger: "human"`.
 - **Reply where the comment was posted:** issue comments on the issue, PR comments on the PR. Say what you did and the commit, in one or two sentences.

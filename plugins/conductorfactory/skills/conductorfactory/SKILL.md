@@ -1,12 +1,13 @@
 ---
 name: conductorfactory
-description: Conductor Factory. Run a local software factory on GitHub issues in Conductor. Label an issue and Conductor sessions triage it, plan with you when needed, build, verify, review and prepare the PR for your approval. Use for /conductorfactory setup, /conductorfactory start, /conductorfactory stop and /conductorfactory status, or to debug a factory run.
+description: Conductor Factory. Run a local software factory on GitHub issues in Conductor. Label an issue and Conductor sessions explore it, build it autonomously, verify, review and prepare the PR with screenshot and video evidence for your approval. Use for /conductorfactory setup (also updates an existing install), /conductorfactory start, /conductorfactory stop and /conductorfactory status, or to debug a factory run.
 ---
 
 # Conductor Factory
 
 A local software factory driven by GitHub issues. Add the queue label (`factory:queue` by default)
-to an issue, and Conductor sessions triage it, plan with you if it needs a decision, build it,
+to an issue, and Conductor sessions explore it and build it on their own, recording their assumptions
+(a plan with you only for a genuinely complex change or one the repository reserves for you),
 verify it against the issue, review it, and hand you a PR to approve. GitHub holds the state
 (issue labels and comments); all work happens in Conductor workspaces on this machine.
 
@@ -87,6 +88,14 @@ Apart from setup, each command only runs the repository's own script and reports
 ### `/conductorfactory setup`
 
 Does everything a repository needs, once. Do each step; skip one only when it is already done.
+
+**It is also the update.** When `conductorfactory/` already exists, setup updates it to this
+skill's version (`/conductorfactory update` means the same): run step 2, which replaces the
+factory's code and prints each changed file, keeps `config.json`, `project.md` and `FACTORY.md`,
+and lists any template sections those lack. Then bring those sections over, keeping the
+repository's values; check `project.md` still matches the repository's rules (step 3 only for what
+changed); skip steps 4 to 6 when already done; report the changed files; and, if a Coordinator is
+running, say the prompts apply from its next tick and new scripts after a stop and start.
 
 1. **Check the tools:** `gh auth status` succeeds, `node --version` is 22 or newer, and the
    repository has a GitHub remote. Stop and say what is missing otherwise. If

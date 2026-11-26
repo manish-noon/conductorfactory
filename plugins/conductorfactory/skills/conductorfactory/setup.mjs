@@ -11,19 +11,42 @@
 // After this the repository runs the factory without the skill installed.
 
 import { execFileSync } from "node:child_process";
-import { chmodSync, copyFileSync, cpSync, existsSync, readFileSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { chmodSync, copyFileSync, cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SKILL = dirname(fileURLToPath(import.meta.url));
 const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 const target = join(root, "conductorfactory");
 
+// Every file under dir, as { relative path: content }.
+function snapshot(dir, base = dir, out = {}) {
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) snapshot(path, base, out);
+    else out[relative(base, path)] = readFileSync(path, "utf8");
+  }
+  return out;
+}
+const OWN = new Set(["config.json", "project.md"]);
+const before = snapshot(target);
+const installed = Object.keys(before).some((f) => !OWN.has(f));
+
 // The factory's own code: always this skill's version.
 for (const part of ["bin", "prompts", "troubleshooting.md"]) rmSync(join(target, part), { recursive: true, force: true });
 cpSync(join(SKILL, "conductorfactory"), target, { recursive: true });
 chmodSync(join(target, "run"), 0o755);
-console.log("updated  conductorfactory/run, bin/, prompts/, troubleshooting.md, config.default.json");
+const after = snapshot(target);
+const changed = Object.keys(after).filter((f) => !OWN.has(f) && before[f] !== after[f]);
+const removed = Object.keys(before).filter((f) => !OWN.has(f) && !(f in after));
+if (!installed) console.log("installed conductorfactory/run, bin/, prompts/, troubleshooting.md, config.default.json");
+else if (!changed.length && !removed.length) console.log("up to date: the factory's code already matches this skill");
+else {
+  console.log(`updated  ${changed.length} file(s) to this skill's version:`);
+  for (const f of changed) console.log(`           ${f in before ? "changed" : "new    "} conductorfactory/${f}`);
+  for (const f of removed) console.log(`           removed conductorfactory/${f}`);
+}
 
 // The repository's own files: never overwritten.
 const own = [
@@ -42,7 +65,25 @@ for (const [from, dest, name] of own) {
   console.log(`created  ${name}`);
 }
 
+// Sections the templates gained since the repository's own copy was written.
+const headings = (text) => new Set(text.split("\n").filter((l) => /^##+ /.test(l)).map((l) => l.trim()));
+for (const [from, dest, name] of own) {
+  if (!existing.has(name) || from === "config.json") continue;
+  const mine = headings(readFileSync(dest, "utf8"));
+  const missing = [...headings(readFileSync(join(SKILL, "templates", from), "utf8"))].filter((h) => !mine.has(h));
+  if (missing.length) console.log(`review   ${name}: the template has sections it lacks: ${missing.join(" · ")}`);
+}
+
 const fresh = (name) => !existing.has(name);
+if (installed) {
+  console.log(`
+This was an update. Next:
+  1. Bring over any template sections listed under "review" above, keeping this repository's values.
+  2. Commit conductorfactory/ (and FACTORY.md if changed).
+  3. If a Coordinator is running, the prompts apply from its next tick; restart its watcher
+     (conductorfactory/run stop, then start) to load new scripts.`);
+  process.exit(0);
+}
 const todo = existsSync(join(target, "project.md")) && /\bTODO\b/.test(readFileSync(join(target, "project.md"), "utf8"));
 
 console.log(`

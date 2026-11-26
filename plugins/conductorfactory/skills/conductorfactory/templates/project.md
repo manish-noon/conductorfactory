@@ -30,7 +30,11 @@ TODO: how an acceptance criterion is proven here.
 
 ## Plan first (tripwires)
 
-The Builder writes a plan and waits for the human when any of these is true.
+Exploring comes first and building directly is the default: bug fixes and small or medium
+features never stop for a plan. The Builder writes a plan and waits for the human only when, after
+exploring, the change itself (not merely the area it touches) needs a decision this repository's
+rules reserve for the owner. Keep this list to those rules; anything else is an assumption the
+Builder records in the PR.
 
 TODO: this repository's list, e.g. schema change or migration · auth or permission change · new
 dependency or vendor · new screen · anything the repository's rules say needs the owner's decision.
